@@ -1,15 +1,12 @@
-import { computed, provide, ref } from 'vue'
+import { computed, inject, provide, ref } from 'vue'
 import { useInfiniteQuery, useQueryClient } from '@tanstack/vue-query'
 import http from '@/service/http'
-import { useUser } from '@/service/modules/user/user'
 import { TicketStatus } from '@/views/Tickets/types'
 import { ChatTabType, type LocalTicketChat, type RemoteTicketChat } from './types'
-import { saveChatItemDetails } from './chat-item-details'
 import type { AxiosResponse } from 'axios'
 
 
 const ChatConversationManagerSymbol = Symbol('ChatConversationManager')
-const ConversationTicketsPerPage = 20
 
 interface FetchTicketListData {
   page: number
@@ -30,7 +27,6 @@ async function fetchTicketList(
   page: number,
   activeTab: ChatTabType,
   direction: 'asc' | 'desc',
-  userId: string
 ): Promise<RemoteTicketChat[]> {
   let data: FetchTicketListData
 
@@ -54,7 +50,7 @@ async function fetchTicketList(
         {
           key: 'operators',
           condition: '$in',
-          value: [userId]
+          value: []
         }
       ]
     }
@@ -79,7 +75,6 @@ async function fetchTicketList(
 }
 
 export function provideChatConversationManager() {
-  const { id: userId } = useUser()
   const queryClient = useQueryClient()
 
   const activeTab = ref<ChatTabType>(ChatTabType.New)
@@ -94,20 +89,21 @@ export function provideChatConversationManager() {
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    queryKey: ['chat-list', activeTab],
+    queryKey: ['chat-list', activeTab, direction], // Added direction to query key for proper caching
     queryFn: async (context) => {
       const chats = await fetchTicketList(
         context.pageParam,
         activeTab.value,
-        userId.value!!
+        direction.value, // FIXED: Added missing direction parameter
       )
 
+      // Uncomment if you need to save chat details
       // chats.forEach((chat) => {
       //   saveChatItemDetails(queryClient, chat)
       // })
 
       return chats
-    }
+    },
     getNextPageParam: (lastPage: any, pages) => {
       if (!Array.isArray(lastPage) || lastPage.length === 0) {
         return undefined
@@ -115,9 +111,7 @@ export function provideChatConversationManager() {
 
       return pages.length + 1
     },
-    enabled() {
-      return userId.value != null
-    },
+    initialPageParam: 1 // Added initialPageParam for @tanstack/vue-query v5
   })
 
   const currentChats = computed<LocalTicketChat[]>(() => {
@@ -146,3 +140,10 @@ export function provideChatConversationManager() {
   return manager
 }
 
+export function useChatConversationManager() {
+  const chatConversationManager = inject(ChatConversationManagerSymbol)
+  if (!chatConversationManager) {
+    throw new Error('ChatConversationManager is not provided')
+  }
+  return chatConversationManager
+}
