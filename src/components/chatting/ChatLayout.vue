@@ -16,10 +16,13 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import ConditionalChatRendererLayout from '@/layout/ConditionalChatRendererLayout.vue'
 import { useChatting } from '@/service/modules/chat/chat'
 import Conversations from '@/components/conversations/Conversations.vue'
+import { provideChatConversationManager } from '@/service/modules/chat/chat-conversation-manager.ts'
 
 const container = ref<HTMLElement | null>(null)
 
 const { chatting, close } = useChatting()
+
+provideChatConversationManager()
 
 const handleKeyDown = (event: KeyboardEvent) => {
   if (event.key === 'Escape') {

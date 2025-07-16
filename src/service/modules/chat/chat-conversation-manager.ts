@@ -1,4 +1,4 @@
-import { computed, inject, provide, ref } from 'vue'
+import { computed, type ComputedRef, inject, provide, type Ref, ref } from 'vue'
 import { useInfiniteQuery, useQueryClient } from '@tanstack/vue-query'
 import http from '@/service/http'
 import { TicketStatus } from '@/views/Tickets/types'
@@ -7,6 +7,16 @@ import type { AxiosResponse } from 'axios'
 
 
 const ChatConversationManagerSymbol = Symbol('ChatConversationManager')
+
+export interface IChatConversationManager {
+  activeTab: Ref<ChatTabType>
+  direction: Ref<'asc' | 'desc'>
+  chatList: ReturnType<typeof useInfiniteQuery>['data']
+  currentChats: ComputedRef<LocalTicketChat[]>
+  triggerLoad: () => Promise<void>
+  isLoading: ReturnType<typeof useInfiniteQuery>['isLoading']
+  isFetchingNextPage: ReturnType<typeof useInfiniteQuery>['isFetchingNextPage']
+}
 
 interface FetchTicketListData {
   page: number
@@ -26,7 +36,7 @@ interface FetchTicketListData {
 async function fetchTicketList(
   page: number,
   activeTab: ChatTabType,
-  direction: 'asc' | 'desc',
+  direction: 'asc' | 'desc'
 ): Promise<RemoteTicketChat[]> {
   let data: FetchTicketListData
 
@@ -94,7 +104,7 @@ export function provideChatConversationManager() {
       const chats = await fetchTicketList(
         context.pageParam,
         activeTab.value,
-        direction.value, // FIXED: Added missing direction parameter
+        direction.value // FIXED: Added missing direction parameter
       )
 
       // Uncomment if you need to save chat details
@@ -125,7 +135,7 @@ export function provideChatConversationManager() {
     }
   }
 
-  const manager = {
+  const manager: IChatConversationManager = {
     activeTab,
     direction,
     chatList,
@@ -135,13 +145,13 @@ export function provideChatConversationManager() {
     isFetchingNextPage
   }
 
-  provide(ChatConversationManagerSymbol, manager)
+  provide<IChatConversationManager>(ChatConversationManagerSymbol, manager)
 
   return manager
 }
 
-export function useChatConversationManager() {
-  const chatConversationManager = inject(ChatConversationManagerSymbol)
+export function useChatConversationManager(): IChatConversationManager {
+  const chatConversationManager = inject<IChatConversationManager>(ChatConversationManagerSymbol)
   if (!chatConversationManager) {
     throw new Error('ChatConversationManager is not provided')
   }
