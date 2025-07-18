@@ -104,7 +104,7 @@ export function provideChatConversationManager() {
       const chats = await fetchTicketList(
         context.pageParam,
         activeTab.value,
-        direction.value // FIXED: Added missing direction parameter
+        direction.value
       )
 
       // Uncomment if you need to save chat details
