@@ -1,6 +1,7 @@
 import { watchImmediate } from '@vueuse/core'
 import { ws } from '@/modules/socket/index.ts'
 import { ref } from 'vue'
+import { addMessage, removeMessage, updateMessage } from '@/service/modules/chat/chat'
 
 enum ChatEventType {
   NewMessage = 'chat.message.new',
@@ -25,5 +26,39 @@ export default function registerEvents() {
     if (token && token !== oldValue) {
       ws.connect(token)
     }
+  })
+
+  // Register event handlers to see incoming messages
+  console.log('🎯 Registering WebSocket event handlers...')
+
+  // Handler for new chat messages
+  ws.onEvent(ChatEventType.NewMessage, (message) => {
+    console.log('📨 New message received:', message)
+    addMessage(message) // Add to our message store!
+  })
+
+  // Handler for deleted messages
+  ws.onEvent(ChatEventType.MessageDeleted, (data) => {
+    console.log('🗑️ Message deleted:', data)
+    if (data._id) {
+      removeMessage(data._id) // Remove from store
+    }
+  })
+
+  // Handler for edited messages
+  ws.onEvent(ChatEventType.MessageEdited, (message) => {
+    console.log('✏️ Message edited:', message)
+    if (message._id) {
+      updateMessage(message._id, message) // Update in store
+    }
+  })
+
+  // Handler for operator presence
+  ws.onEvent(ChatEventType.OperatorConnected, (data) => {
+    console.log('👤 Operator connected:', data)
+  })
+
+  ws.onEvent(ChatEventType.OperatorDisconnected, (data) => {
+    console.log('👋 Operator disconnected:', data)
   })
 }

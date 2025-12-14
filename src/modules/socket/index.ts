@@ -18,11 +18,21 @@ export class WS {
     }
 
     const initWS = () => {
-      console.log('Init')
-      this.ws = new WebSocket(`${window.CALL24_CONFIG.WS_URL}?token=${token}`)
+      const wsUrl = `${window.CALL24_CONFIG.WS_URL}?token=${token}`
+      console.log('🔌 Initializing WebSocket connection to:', wsUrl)
+      this.ws = new WebSocket(wsUrl)
+
+      this.ws.onopen = () => {
+        console.log('✅ WebSocket connected successfully!')
+      }
+
+      this.ws.onerror = (error) => {
+        console.error('❌ WebSocket error:', error)
+      }
 
       this.ws.onclose = (ev: CloseEvent) => {
-        console.log('Websocket closed: ', ev.code, ev.reason)
+        console.log('⚠️ WebSocket closed:', ev.code, ev.reason)
+        console.log('🔄 Reconnecting in 1 second...')
         setTimeout(() => {
           initWS()
         }, 1000)
@@ -31,12 +41,17 @@ export class WS {
       this.ws.onmessage = (ev) => {
         try {
           const { name, payload } = JSON.parse(ev.data)
+          console.log('📩 WebSocket message received:', name, payload)
 
           const handlers = this.events.get(name)?.values()
 
-          if (handlers) for (const fn of handlers) fn(payload)
+          if (handlers) {
+            for (const fn of handlers) fn(payload)
+          } else {
+            console.warn('⚠️ No handlers registered for event:', name)
+          }
         } catch (e) {
-          console.error(`Error while parsing json`, ev.data, e)
+          console.error(`❌ Error while parsing WebSocket message:`, ev.data, e)
         }
       }
     }
